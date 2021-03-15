@@ -193,15 +193,15 @@ class AlphZeroTree:
             else:
                 N.append(0.0)
                 W.append(0.0)
-        N = np.array(N) + 1
+        N = np.array(N)
         W = np.array(W)
 
-        # # Initial selection from this node is uniform random choice,
-        # # because both Q and U are zero (i.e., all actions are tie).
-        # if(N.sum() == 0):
-        #     return np.random.choice(self.dim_action)
+        # Initial selection from this node is uniform random choice,
+        # because both Q and U are zero (i.e., all actions are tie).
+        if N.sum() == 0:
+            return np.random.choice(self.dim_action)
         # print(node.p)
-        U = self.c_puct * node.p * (sum(N ** 0.5) / (N))
+        U = self.c_puct * node.p * (N.sum() ** 0.5) / (N + 1)
         Q = np.where(N > 0, W / N, 0)
         a = np.argmax(Q + U)
         return a
@@ -214,7 +214,7 @@ class AlphZeroTree:
             else:
                 Ns.append(0)
         Ns = np.array(Ns) + 1
-        prob = Ns ** self.temperature
+        prob = Ns ** (1.0 / self.temperature)
         prob /= prob.sum()
         return prob
 
@@ -297,7 +297,7 @@ if __name__ == '__main__':
 
     if env_name == 'CartPole-v0':
         max_return = 200
-    elif env_name == 'CartPose-v1':
+    elif env_name == 'CartPole-v1':
         max_return = 500
     else:
         raise ValueError(f'Environment "{env_name}" is not supported.')
