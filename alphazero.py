@@ -133,7 +133,7 @@ class ReplayBuffer:
 
 class AlphZeroTree:
     def __init__(self, simulator, predictor, s, dim_action, c_puct,
-                 n_simulations, temperature):
+                 n_simulations, temperature, root=None):
         self.simulator = simulator
         self.predictor = predictor
         self.dim_action = dim_action
@@ -141,11 +141,15 @@ class AlphZeroTree:
         self.n_simulations = n_simulations
         self.temperature = temperature
 
-        with torch.no_grad():
-            p, v = self.predictor(torch.tensor([s]))
+        if root is None:
+            with torch.no_grad():
+                p, v = self.predictor(torch.tensor([s]))
             p = p[0].numpy()
-            v = v[0].numpy()
-        self.root = Node(s, p, v, False, dim_action, None)
+            v = v.item()
+            self.root = Node(s, p, v, False, dim_action, None)
+        else:
+            root.parent = None
+            self.root = root
 
     def search(self):
         for i in range(self.n_simulations):
@@ -315,16 +319,24 @@ if __name__ == '__main__':
             initial_obs = env.reset()
             states = []
             pis = []
+            next_root = None
             s_current = initial_obs.astype(np.float32)
             total_reward = 0
             for step in itertools.count():
                 print(f'{step} ', end='')
                 tree = AlphZeroTree(
                     simulator, predictor, s_current, action_dim, c_puct,
-                    n_simulations, temperature)
+                    n_simulations, temperature, next_root)
                 tree.search()
                 pi = tree.compute_pi()
                 a = np.random.choice(action_dim, p=pi)
+
+                # Reuse the subtree of selected action
+                next_root = tree.root.children[a]
+                # Even if the root has children that have not been expanded,
+                # all actions still have nonzero probability and can be drawn.
+                if next_root and next_root.terminal:
+                    next_root = None
 
                 # Do the action and receive an outcome.
                 # An outcome consists of
