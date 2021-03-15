@@ -73,7 +73,8 @@ class Net(nn.Module):
 
         p = self.fc_policy_1(x)
         p = F.relu(p)
-        p = F.softmax(self.fc_policy_out(p), dim=1)
+        p = self.fc_policy_out(p)
+        p = F.softmax(p, dim=1)
 
         v = self.fc_value_1(x)
         v = F.relu(v)
@@ -181,7 +182,8 @@ class AlphZeroTree:
                         p, v = self.predictor(torch.tensor([s_next]))
                     p = p[0].numpy()
                     v = v.item()
-                    new_node = Node(s_next, p, v, False, self.dim_action, node)
+                    new_node = Node(
+                        s_next, p, v, False, self.dim_action, node)
                     node.children[a] = new_node
                     new_node.backup()
                     break
@@ -231,7 +233,6 @@ class Node:
         self.terminal = terminal
         self.N = 0.0
         self.W = 0.0
-        self.dim_action = dim_action
         self.children = [None] * dim_action
         self.parent = parent
 
@@ -273,16 +274,14 @@ if __name__ == '__main__':
     env = gym.make(env_name)  # state(pos, vel, angle, angular vel)
 
     # Hyperparameters
-    gamma = 0.999  # Rate of reward discount
     num_learning_steps = 400000
     replay_buffer_size = 2**14  # 2**14 = 16384
     initial_exploration_steps = 500
     q_update_interval = 1
-    q_target_update_interval = 2000
 
     c_puct = 1.0
     n_simulations = 100
-    temperature = 0.5
+    temperature = 1
 
     # Network training hyper params
     lr = 1e-2  # Learning rate for updating Q function
@@ -315,7 +314,7 @@ if __name__ == '__main__':
         episode_steps = []
         losses = []
         for episode in itertools.count():
-            print(f'{episode}: ', end='')
+            print(f'# {episode}: ', end='')
             initial_obs = env.reset()
             states = []
             pis = []
@@ -323,7 +322,9 @@ if __name__ == '__main__':
             s_current = initial_obs.astype(np.float32)
             total_reward = 0
             for step in itertools.count():
+                env.render()
                 print(f'{step} ', end='')
+
                 tree = AlphZeroTree(
                     simulator, predictor, s_current, action_dim, c_puct,
                     n_simulations, temperature, next_root)
@@ -367,8 +368,7 @@ if __name__ == '__main__':
                 data = DataPoint(s, pi, z)
                 replay_buffer.push(data)
 
-            print(f'# {episode}: R = {total_reward}'
-                  f', steps = {total_steps}')
+            print(f': R = {total_reward}, steps = {total_steps}')
             print()
 
             # Only explore for the initial exploration phase.
@@ -395,7 +395,20 @@ if __name__ == '__main__':
                 losses.append(loss)
 
             if episode % 10 == 0:
-                plt.plot(losses, '.', markersize=1)
+                caption = (f'{lr=}')
+                fig, (ax0, ax1) = plt.subplots(1, 2, figsize=(12, 4))
+                # axes[0].set_title(caption)
+                window_size = 30
+                ax0.plot(returns, '.', markersize=2)
+                ax0.plot(np.convolve(
+                    returns, np.ones(window_size), 'valid')/window_size, '-')
+                ax0.legend(['returns', f'avg (window={window_size})'])
+                ax0.grid()
+                # axes[1].set_title(caption)
+                ax1.plot(losses, '.', markersize=1)
+                ax1.legend(['losses'])
+                ax1.grid()
+                plt.tight_layout()
                 plt.show()
                 plt.close()
 
@@ -408,12 +421,21 @@ if __name__ == '__main__':
     env.close()
 
     caption = (f'{lr=}')
-    plt.title(caption)
-    plt.plot(returns, '.', markersize=1)
-    plt.plot(np.array(losses) * 200, '.', markersize=1)
-    plt.legend(['returns', 'losses'])
-    plt.grid()
+    fig, (ax0, ax1) = plt.subplots(1, 2, figsize=(12, 4))
+    # axes[0].set_title(caption)
+    window_size = 30
+    ax0.plot(returns, '.', markersize=2)
+    ax0.plot(np.convolve(
+        returns, np.ones(window_size), 'valid')/window_size, '-')
+    ax0.legend(['returns', f'avg (window={window_size})'])
+    ax0.grid()
+    # axes[1].set_title(caption)
+    ax1.plot(losses, '.', markersize=1)
+    ax1.legend(['losses'])
+    ax1.grid()
+    plt.tight_layout()
     plt.show()
+    plt.close()
 
     # # Evaluation
     # try:
@@ -453,8 +475,4 @@ if __name__ == '__main__':
     # except KeyboardInterrupt:
     #     print('Ctrl+c.')
 
-    # env.close()
-    # env.close()
-    # env.close()
-    # env.close()
     # env.close()
