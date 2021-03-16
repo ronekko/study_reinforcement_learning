@@ -79,6 +79,7 @@ class Net(nn.Module):
         v = self.fc_value_1(x)
         v = F.relu(v)
         v = self.fc_value_out(v)
+        v = F.sigmoid(v)
         return p, v
 
 
