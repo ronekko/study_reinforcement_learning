@@ -109,7 +109,8 @@ class ReplayBuffer:
 
 class AlphZeroTree:
     def __init__(self, simulator, predictor, s, dim_action, c_puct,
-                 n_simulations, temperature, root=None):
+                 n_simulations, temperature,
+                 root_noise_eps, root_noise_alpha, root=None):
         self.simulator = simulator
         self.predictor = predictor
         self.dim_action = dim_action
@@ -126,6 +127,10 @@ class AlphZeroTree:
         else:
             root.parent = None
             self.root = root
+
+        root_noise = np.random.dirichlet(np.full(dim_action, root_noise_alpha))
+        self.root.p = ((1 - root_noise_eps) * self.root.p +
+                       root_noise_eps * root_noise)
 
     def search(self):
         for i in range(self.n_simulations):
@@ -257,6 +262,8 @@ if __name__ == '__main__':
     c_puct = 1.0
     n_simulations = 100
     temperature = 1
+    root_noise_eps = 0.25
+    root_noise_alpha = 0.5
 
     # Network training hyper params
     lr = 1e-2  # Learning rate for updating Q function
@@ -301,8 +308,9 @@ if __name__ == '__main__':
                 print(f'{step} ', end='')
 
                 tree = AlphZeroTree(
-                    simulator, predictor, s_current, action_dim, c_puct,
-                    n_simulations, temperature, next_root)
+                    simulator, predictor, s_current, action_dim,
+                    c_puct, n_simulations, temperature,
+                    root_noise_eps, root_noise_alpha, next_root)
                 tree.search()
                 pi = tree.compute_pi()
                 a = np.random.choice(action_dim, p=pi)
