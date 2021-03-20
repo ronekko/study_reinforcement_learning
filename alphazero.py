@@ -20,32 +20,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-# class Net(nn.Module):
-#     def __init__(self, state_dim, action_dim):
-#         super(Net, self).__init__()
-#         fc1_dim = 32
-#         fc2_dim = 64
-#         fc3_dim = 128
-#         self.fc1 = nn.Linear(state_dim, fc1_dim)
-#         self.fc2 = nn.Linear(fc1_dim, fc2_dim)
-#         self.fc3 = nn.Linear(fc2_dim, fc3_dim)
-#         self.fc_policy = nn.Linear(fc3_dim, action_dim)
-#         self.fc_value = nn.Linear(fc3_dim, 1)
-
-#     def forward(self, x):
-#         x = self.fc1(x)
-#         x = F.relu(x)
-
-#         x = self.fc2(x)
-#         x = F.relu(x)
-
-#         x = self.fc3(x)
-#         x = F.relu(x)
-
-#         p = F.softmax(self.fc_policy(x), dim=1)
-#         v = self.fc_value(x)
-#         return p, v
-
 
 class Net(nn.Module):
     def __init__(self, state_dim, action_dim):
@@ -79,7 +53,7 @@ class Net(nn.Module):
         v = self.fc_value_1(x)
         v = F.relu(v)
         v = self.fc_value_out(v)
-        v = F.sigmoid(v)
+        v = torch.sigmoid(v)
         return p, v
 
 
