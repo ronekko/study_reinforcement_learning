@@ -358,7 +358,7 @@ if __name__ == '__main__':
 
                 # compute target value
                 p_pred, v_pred = predictor(s)
-                loss_v = F.mse_loss(v_pred, v_target)
+                loss_v = cross_entropy_loss(v_pred, v_target)
                 loss_p = cross_entropy_loss(p_pred, p_target)
                 loss = loss_v + loss_p
 
