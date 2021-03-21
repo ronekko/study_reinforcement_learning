@@ -117,6 +117,8 @@ class AlphZeroTree:
         self.c_puct = c_puct
         self.n_simulations = n_simulations
         self.temperature = temperature
+        self.root_noise_eps = root_noise_eps
+        self.root_noise_alpha = root_noise_alpha
 
         if root is None:
             with torch.no_grad():
@@ -129,15 +131,17 @@ class AlphZeroTree:
             root.parent = None
             self.root = root
 
-        root_noise = np.random.dirichlet(np.full(dim_action, root_noise_alpha))
-        self.root.p = ((1 - root_noise_eps) * self.root.p +
-                       root_noise_eps * root_noise)
-
     def search(self):
+        root_p = self.root.p
         for i in range(self.n_simulations):
             # print(f'{i}: ', end='')
             node = self.root
-            total_reward = 0
+            # Add noise to root p.
+            root_noise = np.random.dirichlet(
+                np.full(self.dim_action, self.root_noise_alpha))
+            node.p = ((1 - self.root_noise_eps) * root_p +
+                      self.root_noise_eps * root_noise)
+
             for depth in itertools.count():
                 # print(f'{depth} ', end='')
                 a = self.select(node)
