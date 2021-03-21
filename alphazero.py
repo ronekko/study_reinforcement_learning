@@ -134,7 +134,6 @@ class AlphZeroTree:
     def search(self):
         root_p = self.root.p
         for i in range(self.n_simulations):
-            # print(f'{i}: ', end='')
             node = self.root
             # Add noise to root p.
             root_noise = np.random.dirichlet(
@@ -143,7 +142,7 @@ class AlphZeroTree:
                       self.root_noise_eps * root_noise)
 
             for depth in itertools.count():
-                # print(f'{depth} ', end='')
+                # Selection
                 a = self.select(node)
                 child_node = node.children[a]
                 if child_node is not None:  # non-leaf node
@@ -208,7 +207,6 @@ class AlphZeroTree:
         Ns = np.array(Ns)
 
         if not greedy:
-            # Ns += 1
             prob = Ns ** (1.0 / self.temperature)
             prob /= prob.sum()
             return prob
@@ -303,9 +301,6 @@ if __name__ == '__main__':
     predictor = Net(state_dim, action_dim)
     optimizer = torch.optim.Adam(predictor.parameters(), lr)
 
-    # q_target = Net(state_dim, action_dim).requires_grad_(False)
-    # q_target.load_state_dict(q.state_dict())
-    # q_target.eval()
     replay_buffer = ReplayBuffer(replay_buffer_size)
 
     if env_name == 'CartPole-v0':
@@ -323,6 +318,7 @@ if __name__ == '__main__':
         returns = []
         episode_steps = []
         losses = []
+
         for episode in itertools.count():
             print(f'# {episode}: ', end='')
             initial_obs = env.reset()
@@ -406,6 +402,7 @@ if __name__ == '__main__':
                 loss_ = loss.item()
                 losses.append(loss)
 
+            # Plot
             if episode % 10 == 0:
                 caption = (f'{lr=}')
                 fig, (ax0, ax1) = plt.subplots(1, 2, figsize=(12, 4))
