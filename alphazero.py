@@ -122,7 +122,7 @@ class AlphZeroTree:
 
         if root is None:
             with torch.no_grad():
-                p, v = self.predictor(torch.tensor([s]))
+                p, v = self.predictor(torch.tensor([s.astype(np.float32)]))
             p = p[0].numpy()
             v = v.item()
             self.root = Node(s, p, v, False, dim_action, None)
@@ -157,7 +157,8 @@ class AlphZeroTree:
                 s_next, done, terminal_value = self.simulator.move(node.s, a)
                 if not done:  # leaf node and non-terminal state
                     with torch.no_grad():
-                        p, v = self.predictor(torch.tensor([s_next]))
+                        p, v = self.predictor(
+                            torch.tensor([s_next.astype(np.float32)]))
                     p = p[0].numpy()
                     v = v.item()
                     new_node = Node(
@@ -328,7 +329,7 @@ if __name__ == '__main__':
             states = []
             pis = []
             next_root = None
-            s_current = initial_obs.astype(np.float32)
+            s_current = initial_obs
             total_reward = 0
             for step in itertools.count():
                 env.render()
@@ -360,9 +361,9 @@ if __name__ == '__main__':
                 #   - info (dict): Additional information.
                 outcome = env.step(a)
                 obs, reward, done, info = outcome
-                s_next = obs.astype(np.float32)
+                s_next = obs
 
-                states.append(s_current)
+                states.append(s_current.astype(np.float32))
                 pis.append(pi)
 
                 s_current = s_next
