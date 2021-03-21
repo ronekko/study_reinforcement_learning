@@ -124,6 +124,7 @@ class AlphZeroTree:
             p = p[0].numpy()
             v = v.item()
             self.root = Node(s, p, v, False, dim_action, None)
+            self.root.N = 1.0
         else:
             root.parent = None
             self.root = root
@@ -170,25 +171,26 @@ class AlphZeroTree:
             # print()
 
     def select(self, node):
-        N = []
-        W = []
-        for child in node.children:
-            if child:
-                N.append(child.N)
-                W.append(child.W)
-            else:
-                N.append(0.0)
-                W.append(0.0)
-        N = np.array(N)
-        W = np.array(W)
+        N_total = node.N - 1.0
 
         # Initial selection from this node is uniform random choice,
         # because both Q and U are zero (i.e., all actions are tie).
-        if N.sum() == 0:
+        if N_total == 0:
             return np.random.choice(self.dim_action)
-        # print(node.p)
-        U = self.c_puct * node.p * (N.sum() ** 0.5) / (N + 1)
-        Q = np.where(N > 0, W / N, 0)
+
+        N = []
+        Q = []
+        for child in node.children:
+            if child:
+                N.append(child.N)
+                Q.append(child.W / child.N)
+            else:
+                N.append(0.0)
+                Q.append(0.0)
+        N = np.array(N)
+        Q = np.array(Q)
+
+        U = self.c_puct * node.p * (N_total ** 0.5) / (N + 1)
         a = np.argmax(Q + U)
         return a
 
