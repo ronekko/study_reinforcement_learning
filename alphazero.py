@@ -241,7 +241,7 @@ class Node:
                 f'W={self.W}, terminal={self.terminal})')
 
 
-class GymSimulator:
+class CartPoleSimulator:
     def __init__(self, env):
         self.env = copy.deepcopy(env)
 
@@ -275,7 +275,7 @@ if __name__ == '__main__':
     # 2. Cart Position is more than ±2.4 (center of the cart reaches the edge
     #    of the display)
     # 3. Episode length is greater than 200 (500 for v1).
-    env_name = 'CartPole-v0'
+    env_name = 'CartPole-v1'
     env = gym.make(env_name)  # state(pos, vel, angle, angular vel)
 
     # Hyperparameters
@@ -310,7 +310,7 @@ if __name__ == '__main__':
     else:
         raise ValueError(f'Environment "{env_name}" is not supported.')
 
-    simulator = GymSimulator(env)
+    simulator = CartPoleSimulator(env)
 
     # Training
     try:
