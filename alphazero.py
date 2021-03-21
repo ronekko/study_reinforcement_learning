@@ -197,17 +197,26 @@ class AlphZeroTree:
         a = np.argmax(Q + U)
         return a
 
-    def compute_pi(self):
+    def compute_pi(self, greedy=False):
         Ns = []
         for child in self.root.children:
             if child:
                 Ns.append(child.N)
             else:
                 Ns.append(0)
-        Ns = np.array(Ns) + 1
-        prob = Ns ** (1.0 / self.temperature)
-        prob /= prob.sum()
-        return prob
+        Ns = np.array(Ns)
+
+        if not greedy:
+            # Ns += 1
+            prob = Ns ** (1.0 / self.temperature)
+            prob /= prob.sum()
+            return prob
+        else:
+            argmax_mask = Ns == Ns.max()
+            prob = np.zeros(self.dim_action, np.float32)
+            prob[argmax_mask] = 1.0
+            prob /= prob.sum()
+            return prob
 
 
 class Node:
@@ -276,9 +285,10 @@ if __name__ == '__main__':
     initial_exploration_steps = 500
     q_update_interval = 1
 
-    c_puct = 1.0
-    n_simulations = 100
-    temperature = 1
+    c_puct = 0.5
+    n_simulations = 50
+    greedy_pi_start_steps = 30
+    pi_temperature = 1
     root_noise_eps = 0.25
     root_noise_alpha = 0.5
 
@@ -326,10 +336,11 @@ if __name__ == '__main__':
 
                 tree = AlphZeroTree(
                     simulator, predictor, s_current, action_dim,
-                    c_puct, n_simulations, temperature,
+                    c_puct, n_simulations, pi_temperature,
                     root_noise_eps, root_noise_alpha, next_root)
                 tree.search()
-                pi = tree.compute_pi()
+                greedy = step >= greedy_pi_start_steps
+                pi = tree.compute_pi(greedy)
                 a = np.random.choice(action_dim, p=pi)
 
                 # Reuse the subtree of selected action
