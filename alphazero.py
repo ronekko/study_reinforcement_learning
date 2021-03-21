@@ -141,30 +141,29 @@ class AlphZeroTree:
             for depth in itertools.count():
                 # print(f'{depth} ', end='')
                 a = self.select(node)
-                outcome = self.simulator.move(node.s, a)
-                obs, r, done, info = outcome
-                s_next = obs.astype(np.float32)
-                total_reward += r
                 child_node = node.children[a]
                 if child_node is not None:  # non-leaf node
                     node = child_node
                     if node.terminal:
                         node.backup()
                         break
-                elif done:  # leaf node and terminal state
-                    z = total_reward / self.simulator.max_return
-                    new_node = Node(
-                        s_next, None, z, True, self.dim_action, node)
-                    node.children[a] = new_node
-                    new_node.backup()
-                    break
-                else:  # leaf node and non-terminal state
+                    continue
+
+                # Expansion
+                s_next, done, terminal_value = self.simulator.move(node.s, a)
+                if not done:  # leaf node and non-terminal state
                     with torch.no_grad():
                         p, v = self.predictor(torch.tensor([s_next]))
                     p = p[0].numpy()
                     v = v.item()
                     new_node = Node(
                         s_next, p, v, False, self.dim_action, node)
+                    node.children[a] = new_node
+                    new_node.backup()
+                    break
+                else:  # leaf node and terminal state
+                    new_node = Node(s_next, None, terminal_value, True,
+                                    self.dim_action, node)
                     node.children[a] = new_node
                     new_node.backup()
                     break
@@ -231,14 +230,26 @@ class Node:
 
 
 class GymSimulator:
-    def __init__(self, env, max_return):
+    def __init__(self, env):
         self.env = copy.deepcopy(env)
-        self.max_return = max_return
 
-    def move(self, s, a):
+    def move(self, state, action):
         self.env.reset()
-        self.env.env.state = s
-        return self.env.step(a)
+        self.env.env.state = state
+        step_outcome = self.env.step(action)
+
+        observation, reward, done, info = step_outcome
+        s_next = observation
+        if done:
+            if ((-2.4 < s_next[0] < 2.4) and
+                    (-12.0 < np.rad2deg(s_next[2]) < 12.0)):
+                win = True
+            else:
+                win = False
+            terminal_value = 1.0 if win else 0.0
+        else:
+            terminal_value = None
+        return s_next, done, terminal_value
 
 
 def cross_entropy_loss(p_pred, p_target):
@@ -289,7 +300,7 @@ if __name__ == '__main__':
     else:
         raise ValueError(f'Environment "{env_name}" is not supported.')
 
-    simulator = GymSimulator(env, max_return)
+    simulator = GymSimulator(env)
 
     # Training
     try:
