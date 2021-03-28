@@ -19,6 +19,7 @@ import numpy as np  # type: ignore
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from tqdm import tqdm  # type: ignore
 
 
 class Net(nn.Module):
@@ -446,42 +447,51 @@ if __name__ == '__main__':
     plt.show()
     plt.close()
 
-    # # Evaluation
-    # try:
-    #     for test_episode in itertools.count():
-    #         initial_obs = env.reset()
-    #         s = initial_obs.astype(np.float32)
-    #         total_reward = 0
-    #         images = []
-    #         for test_step in itertools.count():
-    #             env.render()
-    #             images.append(env.render('rgb_array'))
-    #             with torch.no_grad():
-    #                 action_values = q(torch.tensor([s]))
-    #                 a = action_values.argmax(1).item()
-    #             outcome = env.step(a)
-    #             obs, reward, done, info = outcome
-    #             s = obs.astype(np.float32)
-    #             total_reward += reward
-    #             if done:
-    #                 break
+    # Testing
+    try:
+        for test_episode in itertools.count():
+            initial_obs = env.reset()
+            s = initial_obs
+            next_root = None
+            total_reward = 0
+            images = []
+            for test_step in tqdm(itertools.count()):
+                images.append(env.render('rgb_array'))
 
-    #         # print(transitions)
-    #         print(f'# {test_episode}: R = {total_reward}, eps = 0')
+                tree = AlphZeroTree(
+                    simulator, predictor, s, action_dim,
+                    c_puct, n_simulations, pi_temperature,
+                    root_noise_eps, root_noise_alpha, next_root)
+                tree.search()
+                pi = tree.compute_pi(greedy=True)
+                a = pi.argmax()
+                next_root = tree.root.children[a]
+                # Even if the root has children that have not been expanded,
+                # all actions still have nonzero probability and can be drawn.
+                if next_root and next_root.terminal:
+                    next_root = None
+                outcome = env.step(a)
+                obs, reward, done, info = outcome
+                s = obs
+                total_reward += reward
+                if done:
+                    break
 
-    #         # Save the images of this episode.
-    #         current_datetime = time.strftime("%Y%m%d-%H%M%S")
-    #         episode_dirpath = Path(env_name, current_datetime)
-    #         episode_dirpath.mkdir(parents=True, exist_ok=True)
-    #         print(f'Saving images to {episode_dirpath.absolute()} ...', end='')
-    #         n_digits = int(np.ceil(np.log10(len(images) + 1)))
-    #         for filename, image in enumerate(images):
-    #             filepath = episode_dirpath / f'{filename:0>{n_digits}}.png'
-    #             plt.imsave(filepath, image)
-    #         print('done.')
-    #         print()
+            print(f'# {test_episode}: R = {total_reward}')
 
-    # except KeyboardInterrupt:
-    #     print('Ctrl+c.')
+            # Save the images of this episode.
+            current_datetime = time.strftime("%Y%m%d-%H%M%S")
+            episode_dirpath = Path(env_name, current_datetime)
+            episode_dirpath.mkdir(parents=True, exist_ok=True)
+            print(f'Saving images to {episode_dirpath.absolute()} ...', end='')
+            n_digits = int(np.ceil(np.log10(len(images) + 1)))
+            for filename, image in enumerate(images):
+                filepath = episode_dirpath / f'{filename:0>{n_digits}}.png'
+                plt.imsave(filepath, image)
+            print('done.')
+            print()
 
-    # env.close()
+    except KeyboardInterrupt:
+        print('Ctrl+c.')
+
+    env.close()
