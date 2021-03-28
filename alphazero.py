@@ -295,12 +295,14 @@ if __name__ == '__main__':
     # Network training hyper params
     lr = 1e-2  # Learning rate for updating Q function
     batch_size = 128
+    weight_decay = 1e-5
 
     # Network
     state_dim = env.observation_space.shape[0]
     action_dim = env.action_space.n
     predictor = Net(state_dim, action_dim)
-    optimizer = torch.optim.Adam(predictor.parameters(), lr)
+    optimizer = torch.optim.Adam(predictor.parameters(), lr,
+                                 weight_decay=weight_decay)
 
     replay_buffer = ReplayBuffer(replay_buffer_size)
 
