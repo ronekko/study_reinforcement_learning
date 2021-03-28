@@ -383,12 +383,12 @@ if __name__ == '__main__':
             print()
 
             # Only explore for the initial exploration phase.
-            if total_steps < initial_exploration_steps:
+            if len(replay_buffer) < initial_exploration_steps:
                 continue
 
             ####################
             # Update predictor
-            for k in range(100):
+            for k in range(step):
                 batch = replay_buffer.sample_batch(batch_size)
                 s, p_target, v_target = batch
 
@@ -409,15 +409,18 @@ if __name__ == '__main__':
             if episode % 10 == 0:
                 caption = (f'{lr=}')
                 fig, (ax0, ax1) = plt.subplots(1, 2, figsize=(12, 4))
-                # axes[0].set_title(caption)
+                ax0.set_title('Return (total reward) for each episode')
                 window_size = 30
                 ax0.plot(returns, '.', markersize=2)
                 ax0.plot(np.convolve(
                     returns, np.ones(window_size), 'valid')/window_size, '-')
+                ax0.set_xlabel('Episodes')
                 ax0.legend(['returns', f'avg (window={window_size})'])
                 ax0.grid()
-                # axes[1].set_title(caption)
+
+                ax1.set_title('Loss for each update')
                 ax1.plot(losses, '.', markersize=1)
+                ax1.set_xlabel('Updates')
                 ax1.legend(['losses'])
                 ax1.grid()
                 plt.tight_layout()
@@ -434,15 +437,18 @@ if __name__ == '__main__':
 
     caption = (f'{lr=}')
     fig, (ax0, ax1) = plt.subplots(1, 2, figsize=(12, 4))
-    # axes[0].set_title(caption)
+    ax0.set_title('Return (total reward) for each episode')
     window_size = 30
     ax0.plot(returns, '.', markersize=2)
     ax0.plot(np.convolve(
         returns, np.ones(window_size), 'valid')/window_size, '-')
+    ax0.set_xlabel('Episodes')
     ax0.legend(['returns', f'avg (window={window_size})'])
     ax0.grid()
-    # axes[1].set_title(caption)
+
+    ax1.set_title('Loss for each update')
     ax1.plot(losses, '.', markersize=1)
+    ax1.set_xlabel('Updates')
     ax1.legend(['losses'])
     ax1.grid()
     plt.tight_layout()
